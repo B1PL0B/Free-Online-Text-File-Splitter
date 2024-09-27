@@ -1,6 +1,8 @@
 ## Free Online Text File Splitter
 
 A web-based application that allows users to split text files (e.g., .txt, .csv, .log) into a specified number of smaller files. The application operates entirely client-side, ensuring privacy and security.
+![Image Description](https://raw.githubusercontent.com/B1PL0B/Free-Online-Text-File-Splitter/refs/heads/main/demo.png)
+
 
 **Features:**
 
@@ -34,8 +36,7 @@ While this application is designed to be functional, additional testing and opti
 
 **Installation:**
 
-1. Clone this repository.
-2. Open the `index.html` file in a web browser.
+1. Download and Open the `index.html` file in a web browser.
 
 **Contributions:**
 
