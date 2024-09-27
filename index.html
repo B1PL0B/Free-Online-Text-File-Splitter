@@ -1,1 +1,195 @@
-test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online Text File Splitter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="file"],
+        input[type="number"],
+        select,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #progressContainer {
+            display: none;
+            margin-top: 20px;
+        }
+        #progressBar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #progressBarFill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0;
+            transition: width 0.3s;
+        }
+        #progressText {
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Free Online Text File Splitter</h1>
+        <form id="splitterForm">
+            <label for="fileInput">Select a text file:(.txt, .csv, and .log files)</label>
+            <input type="file" id="fileInput" accept=".txt,.csv,.log" required>
+            
+            <label for="splitCount">Number of splits: (01-100)</label>
+            <input type="number" id="splitCount" min="2" max="100" value="2" required>
+            
+            <label for="splitMethod">Split method:</label>
+            <select id="splitMethod">
+                <option value="lines">Split by lines</option>
+                <option value="characters">Split by characters</option>
+            </select>
+            
+            <button type="submit" id="splitButton">Split File</button>
+        </form>
+        
+        <div id="progressContainer">
+            <div id="progressBar">
+                <div id="progressBarFill"></div>
+            </div>
+            <div id="progressText">100%</div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('splitterForm');
+        const fileInput = document.getElementById('fileInput');
+        const splitCount = document.getElementById('splitCount');
+        const splitMethod = document.getElementById('splitMethod');
+        const splitButton = document.getElementById('splitButton');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const progressText = document.getElementById('progressText');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            const numSplits = parseInt(splitCount.value);
+            const method = splitMethod.value;
+
+            if (!file || numSplits < 2) {
+                alert('Please select a file and specify at least 2 splits.');
+                return;
+            }
+
+            splitButton.disabled = true;
+            progressContainer.style.display = 'block';
+            progressBarFill.style.width = '0%';
+            progressText.textContent = '0%';
+
+            try {
+                const content = await readFile(file);
+                const splits = splitContent(content, numSplits, method);
+                await createAndDownloadZip(splits, file.name);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while processing the file. Please try again.');
+            } finally {
+                splitButton.disabled = false;
+                progressContainer.style.display = 'none';
+            }
+        });
+
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        function splitContent(content, numSplits, method) {
+            const splits = [];
+            if (method === 'lines') {
+                const lines = content.split('\n');
+                const linesPerSplit = Math.ceil(lines.length / numSplits);
+                for (let i = 0; i < numSplits; i++) {
+                    splits.push(lines.slice(i * linesPerSplit, (i + 1) * linesPerSplit).join('\n'));
+                }
+            } else {
+                const charsPerSplit = Math.ceil(content.length / numSplits);
+                for (let i = 0; i < numSplits; i++) {
+                    splits.push(content.substr(i * charsPerSplit, charsPerSplit));
+                }
+            }
+            return splits;
+        }
+
+        async function createAndDownloadZip(splits, originalFileName) {
+            const zip = new JSZip();
+            const baseName = originalFileName.replace(/\.[^/.]+$/, "");
+            const extension = originalFileName.split('.').pop();
+
+            splits.forEach((split, index) => {
+                zip.file(`${baseName}_part${index + 1}.${extension}`, split);
+            });
+
+            const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
+                const progress = metadata.percent.toFixed(0);
+                progressBarFill.style.width = `${progress}%`;
+                progressText.textContent = `${progress}%`;
+            });
+
+            const url = URL.createObjectURL(content);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${baseName}_split.zip`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
